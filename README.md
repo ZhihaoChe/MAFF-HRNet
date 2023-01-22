@@ -29,7 +29,7 @@ pip install -r requirements.txt
 ```
 ## Data Preprocessing
 ### Split Image
-you may modify preprocessing.py to adapt code to cut your image.
+You may modify preprocessing.py to adapt code to cut your image.
 ```
 python preprocessing.py
 ```
