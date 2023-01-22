@@ -3,6 +3,7 @@
 This repository contains the code for the MAFF-HRNet project from this paper. At present, the program status is version 1.0, which will be further updated and improved in the future.
 
 <img src="https://github.com/ZhihaoChe/MAFF-HRNet/blob/master/img/structure.jpg" width="800" height="400">
+
 ## Environment Setup
 ### Create and activate a virtual environment to work in, e.g. using Conda:
 It is worth noting that python 3.7 and torch 1.8 are recommended.
