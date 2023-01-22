@@ -16,18 +16,26 @@ conda activate MAFF
 pip install -r requirements.txt
 ```
 ## Data Arrangment
-you may modify preprocessing.py to adapt code to your own data.
 ```
-├──data
-    ├──ImageSets
-    │      ├──Segmentation
-    │      │       ├── train.txt
-    │      │       ├── val.txt
-    ├──SegmentationClass
-    │      ├── *.png
-    └──JPEGImages
+├──VOC2007
+     ├──ImageSets
+     │      ├──Segmentation
+     │      │       ├── train.txt
+     │      │       ├── val.txt
+     ├──SegmentationClass
+     │      ├── *.png
+     └──JPEGImages
            └── *.jpg
-    
+```
+## Data Preprocessing
+### Split Image
+you may modify preprocessing.py to adapt code to cut your image.
+```
+python preprocessing.py
+```
+### About Split TXT Files
+```
+python preprocessing.py
 ```
 ## Training
 - Training with Multi-GPU.  
