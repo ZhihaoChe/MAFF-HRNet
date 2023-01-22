@@ -12,3 +12,20 @@ conda activate MAFF
 ```
 pip install -r requirements.txt
 ```
+## Training
+- Training with Multi-GPU. （recommended）  
+
+  set distributed = True
+```
+python -m torch.distributed.launch --nproc_per_node=num_gpu train.py
+```
+- Training with single GPU.
+```
+python train.py
+```
+## Inference
+```
+python predict.py
+```
+## Reference
+https://github.com/bubbliiiing/unet-pytorch
