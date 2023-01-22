@@ -15,6 +15,20 @@ conda activate MAFF
 ```
 pip install -r requirements.txt
 ```
+## Data Arrangment
+you may modify preprocessing.py to adapt code to your own data.
+```
+├──data
+    ├──ImageSets
+    │      ├──Segmentation
+    │      │       ├── train.txt
+    │      │       ├── val.txt
+    ├──SegmentationClass
+    │      ├── *.png
+    └──JPEGImages
+           └── *.jpg
+    
+```
 ## Training
 - Training with Multi-GPU.  
 
