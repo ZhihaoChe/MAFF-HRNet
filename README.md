@@ -16,7 +16,7 @@ conda activate MAFF
 pip install -r requirements.txt
 ```
 ## Training
-- Training with Multi-GPU. （recommended）  
+- Training with Multi-GPU.  
 
   set distributed = True
 ```
