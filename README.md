@@ -12,4 +12,3 @@ conda activate MAFF
 ```
 pip install -r requirements.txt
 ```
-外链图片转存失败,源站可能有防盗链机制,建议将图片保存下来直接上传(img-MbNVsNbR-1660183966119)(https://github.com/HeTingwei/ReadmeLearn/blob/master/avatar1.jpg)]
