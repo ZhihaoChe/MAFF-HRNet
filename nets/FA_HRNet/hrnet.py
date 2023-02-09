@@ -17,13 +17,34 @@ class Down_Sampling(nn.Module):
         self.bn2 = nn.BatchNorm2d(out_channles)
         self.relu = nn.ReLU()
 
-        self.cbam = CBAM(in_channel=out_channles)
+        self.CA = ChannelAttention()
 
     def forward(self, x):
         out = self.relu(self.bn1(self.conv1(x)))
         out = self.bn2(self.conv2(out))
 
-        out = self.cbam(out)
+        out = self.CA(out)
+        out = self.relu(out)
+
+        return out
+
+
+class Down_T_Sampling(nn.Module):
+    def __init__(self, in_channels, out_channles):
+        super(Down_T_Sampling, self).__init__()
+        self.conv1 = nn.Conv2d(in_channels, out_channles, kernel_size=3, stride=2, padding=1)
+        self.bn1 = nn.BatchNorm2d(out_channles)
+        self.conv2 = nn.Conv2d(out_channles, out_channles, kernel_size=3, padding=1)
+        self.bn2 = nn.BatchNorm2d(out_channles)
+        self.relu = nn.ReLU()
+
+        self.TA = TransEncoder(out_channles, num_head=4, num_layer=6, num_patches=16, use_pos_embed=False)
+
+    def forward(self, x):
+        out = self.relu(self.bn1(self.conv1(x)))
+        out = self.bn2(self.conv2(out))
+
+        out = self.TA(out)
         out = self.relu(out)
 
         return out
@@ -39,11 +60,11 @@ class HRnet_Backbone(nn.Module):
         del self.model.classifier
 
         pre_channel1 = np.int_(self.model.pre_stage_channels[0])
-        self.DSP1 = Down_Sampling(in_channels=64*4, out_channles=pre_channel1)
+        self.DSP1 = Down_Sampling(in_channels=64*4, out_channles=pre_channel1*2)
         pre_channel2 = np.int_(self.model.pre_stage_channels[1])
-        self.DSP2 = Down_Sampling(in_channels=pre_channel2, out_channles=pre_channel2)
+        self.DSP2 = Down_Sampling(in_channels=pre_channel2, out_channles=pre_channel2*2)
         pre_channel3 = np.int_(self.model.pre_stage_channels[2])
-        self.DSP3 = Down_Sampling(in_channels=pre_channel3, out_channles=pre_channel3)
+        self.DSP3 = Down_T_Sampling(in_channels=pre_channel3, out_channles=pre_channel3*2)
 
     def forward(self, x):
         # The stem part

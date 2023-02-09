@@ -3,6 +3,28 @@ import torch
 import torch.nn as nn
 
 
+class TransEncoder(nn.Module):
+    def __init__(self, channel, num_head, num_layer, num_patches, use_pos_embed):
+        super(TransEncoder, self).__init__()
+        self.channel = channel
+        self.use_pos_embed = use_pos_embed
+        translayer = nn.TransformerEncoderLayer(d_model=channel, nhead=num_head)
+        self.trans = nn.TransformerEncoder(translayer, num_layers=num_layer)
+        if self.use_pos_embed:
+            self.pos_embed = nn.Parameter(torch.zeros(1, num_patches, channel))
+            nn.init.trunc_normal_(self.pos_embed, std=0.02)
+
+    def forward(self, x):
+        h, w = x.shape[2], x.shape[3]
+        if self.use_pos_embed:
+            x = x.flatten(2).transpose(1, 2) + self.pos_embed
+        else:
+            x = x.flatten(2).transpose(1, 2)
+        x = self.trans(x)
+        x = x.transpose(1, 2).view(-1, self.channel, int(h), int(w))
+        return x
+
+
 class h_sigmoid(nn.Module):
     def __init__(self, inplace=True):
         super(h_sigmoid, self).__init__()
@@ -154,95 +176,25 @@ class SpatialAttentionModul(nn.Module):  # 空间注意力模块
         return x
 
 
-class SE_Block(nn.Module):
-    def __init__(self, ch_in, reduction=16):
-        super(SE_Block, self).__init__()
-        self.avg_pool = nn.AdaptiveAvgPool2d(1)  # 全局自适应池化
-        self.fc = nn.Sequential(
-            nn.Linear(ch_in, ch_in // reduction, bias=False),
-            nn.ReLU(inplace=True),
-            nn.Linear(ch_in // reduction, ch_in, bias=False),
-            nn.Sigmoid()
-        )
+class ChannelAttention(nn.Module):
+    def __init__(self):
+        super(ChannelAttention, self).__init__()
+        self.beta = torch.nn.Parameter(torch.FloatTensor(1), requires_grad=True)
+        self.beta.data.fill_(0.)
+        self.softmax = nn.Softmax(dim=2)
 
     def forward(self, x):
-        b, c, _, _ = x.size()
-        y = self.avg_pool(x).view(b, c)  # squeeze操作
-        y = self.fc(y).view(b, c, 1, 1)  # FC获取通道注意力权重，是具有全局信息的
-        return x * y.expand_as(x)  # 注意力作用每一个通道上
+        b, c, h, w = x.size()
+        X = self.softmax(torch.matmul(x.view(b, c, h * w), x.view(b, c, h * w).transpose(1, 2)))
+        X = torch.matmul(X.transpose(1, 2), x.view(b, c, h * w)).view(b, c, h, w)
+        X = self.beta * X + x
 
-
-class PAM_Module(nn.Module):
-    """ Position attention module"""
-    #Ref from SAGAN
-    def __init__(self, in_dim):
-        super(PAM_Module, self).__init__()
-        self.chanel_in = in_dim
-
-        self.query_conv = nn.Conv2d(in_channels=in_dim, out_channels=in_dim//8, kernel_size=1)
-        self.key_conv   = nn.Conv2d(in_channels=in_dim, out_channels=in_dim//8, kernel_size=1)
-        self.value_conv = nn.Conv2d(in_channels=in_dim, out_channels=in_dim, kernel_size=1)
-        self.gamma      = nn.Parameter(torch.zeros(1))
-
-        self.softmax = nn.Softmax(dim=-1)
-
-    def forward(self, x):
-        """
-            inputs :
-                x : input feature maps( B X C X H X W)
-            returns :
-                out : attention value + input feature
-                attention: B X (HxW) X (HxW)
-        """
-        m_batchsize, C, height, width = x.size()
-        proj_query = self.query_conv(x).view(m_batchsize, -1, width*height).permute(0, 2, 1)
-        proj_key = self.key_conv(x).view(m_batchsize, -1, width*height)
-        energy = torch.bmm(proj_query, proj_key)
-        attention = self.softmax(energy)
-        proj_value = self.value_conv(x).view(m_batchsize, -1, width*height)
-
-        out = torch.bmm(proj_value, attention.permute(0, 2, 1))
-        out = out.view(m_batchsize, C, height, width)
-
-        out = self.gamma*out + x
-        return out
-
-
-class CAM_Module(nn.Module):
-    """ Channel attention module"""
-    def __init__(self, in_dim):
-        super(CAM_Module, self).__init__()
-        self.chanel_in = in_dim
-        self.gamma     = nn.Parameter(torch.zeros(1))
-        self.softmax   = nn.Softmax(dim=-1)
-
-    def forward(self, x):
-        """
-            inputs :
-                x : input feature maps( B X C X H X W)
-            returns :
-                out : attention value + input feature
-                attention: B X C X C
-        """
-        m_batchsize, C, height, width = x.size()
-        proj_query = x.view(m_batchsize, C, -1)
-        proj_key = x.view(m_batchsize, C, -1).permute(0, 2, 1)
-        energy = torch.bmm(proj_query, proj_key)
-        energy_new = torch.max(energy, -1, keepdim=True)[0].expand_as(energy)-energy
-        attention = self.softmax(energy_new)
-        proj_value = x.view(m_batchsize, C, -1)
-
-        out = torch.bmm(attention, proj_value)
-        out = out.view(m_batchsize, C, height, width)
-
-        out = self.gamma*out + x
-        return out
+        return X
 
 
 if __name__ == '__main__':
-    x = torch.Tensor(1, 8, 48, 48)
-    # layer = CBAM(in_channel=64)
-    # layer = CoordAtt(3,3)
-    layer = PAM_Module(in_dim=8)
+    x = torch.Tensor(1, 256, 64, 64)
+    # layer = CBAM(in_channel=256)
+    layer = TransEncoder(256, num_head=4, num_layer=6, num_patches=16, use_pos_embed=False)
     y = layer(x)
     print(y.shape)
